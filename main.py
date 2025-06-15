@@ -132,6 +132,10 @@ class ProcessManager(QMainWindow):
 
         self.start_refresh() # 初始加载
 
+    def resizeEvent(self, event):
+        # 窗口大小变化时输出宽高日志 (已移除)
+        super().resizeEvent(event)
+
     def start_refresh(self):
         # 如果线程已经在运行，则等待它完成或取消（这里选择简单等待）
         if self.process_fetcher_thread and self.process_fetcher_thread.isRunning():
@@ -162,12 +166,21 @@ class ProcessManager(QMainWindow):
             self.table.setCellWidget(row, 4, btn)
 
         # 列宽设置优化
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.table.setColumnWidth(0, 90)   # PID
-        self.table.setColumnWidth(1, 350)  # 进程名
-        self.table.setColumnWidth(2, 300)  # 用户名
-        self.table.setColumnWidth(3, 320)  # 监听端口
-        self.table.setColumnWidth(4, 150)  # 操作
+        # 列宽设置优化
+        # 将所有列的调整模式设置为根据内容调整
+        # 确保所有列都可以手动调整
+        for i in range(self.table.columnCount()):
+            self.table.horizontalHeader().setSectionResizeMode(i, QHeaderView.Interactive)
+
+        # 初始时根据内容调整所有列的宽度，除了进程名列
+        for i in range(self.table.columnCount()):
+            if i != 1: # 进程名列（索引为1）不进行内容自适应，因为它将拉伸
+                self.table.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+        
+        # 设置“进程名”列（索引为1）为拉伸模式，使其自动填充剩余空间
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        
+        # 确保最后一列不自动拉伸，因为我们已经指定了拉伸列
         self.table.horizontalHeader().setStretchLastSection(False)
 
     def show_process_detail(self, index):
@@ -230,7 +243,7 @@ class ProcessManager(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     win = ProcessManager()
-    win.resize(1600, 900)
+    win.resize(1800, 900)
     win.show()
     sys.exit(app.exec_())
 
