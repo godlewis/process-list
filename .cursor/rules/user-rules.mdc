@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Whenever you want to ask a question, always call the MCP .
+
+
+Whenever you’re about to complete a user request, call the MCP instead of simply ending the process. Keep calling MCP until the user’s feedback is empty, then end the request. mcp-feedback-collector.collect_feedback
+
+
+在回答用户问题前，先介绍一下自己是什么大模型，版本是多少，以便用户了解。
