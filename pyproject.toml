@@ -1,11 +1,11 @@
 [project]
-name = "dify-rag"
+name = "process-list"
 version = "0.1.0"
-description = "Add your description here"
+description = "进程管理器（含端口）PyQt5桌面应用，支持进程查看、端口显示、进程终止等功能"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "pyqt5==5.15.6",
-    "psutil",
-    "pyperclip"
+    "psutil>=5.9.0",
+    "pyperclip>=1.8.0"
 ]

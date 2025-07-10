@@ -3,10 +3,10 @@ import psutil
 import re
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
-    QTableWidget, QTableWidgetItem, QMessageBox, QLabel, QHeaderView, QDialog, QTextEdit, QPushButton, QMenu, QAction
+    QTableWidget, QTableWidgetItem, QMessageBox, QLabel, QHeaderView, QDialog, QTextEdit, QMenu, QAction, QDesktopWidget
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QCursor, QIcon
+from PyQt5.QtGui import QIcon
 import pyperclip # 导入pyperclip库用于复制内容
 
 # 定义一个工作线程类
@@ -20,31 +20,40 @@ class ProcessFetcher(QThread):
     def run(self):
         proc_list = []
         port_map = {}
+
         # 获取所有网络连接，建立端口到PID的映射
-        for conn in psutil.net_connections(kind='inet'):
-            if conn.status == 'LISTEN' and conn.laddr and conn.pid:
-                port = conn.laddr.port
-                if conn.pid not in port_map:
-                    port_map[conn.pid] = set()
-                port_map[conn.pid].add(str(port))
+        try:
+            for conn in psutil.net_connections(kind='inet'):
+                if conn.status == 'LISTEN' and conn.laddr and conn.pid:
+                    port = conn.laddr.port
+                    if conn.pid not in port_map:
+                        port_map[conn.pid] = set()
+                    port_map[conn.pid].add(str(port))
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            # 如果无法获取网络连接信息，继续处理进程信息
+            pass
 
         # 遍历所有进程
         for proc in psutil.process_iter(['pid', 'name', 'username', 'cmdline']):
-            pid = proc.info['pid']
-            name = proc.info.get('name', '')
-            username = proc.info.get('username', '')
-            cmdline_raw = proc.info.get('cmdline', [])
-            if not isinstance(cmdline_raw, (list, tuple)):
-                cmdline_raw = [str(cmdline_raw)] if cmdline_raw else []
-            cmdline = ' '.join(cmdline_raw)
-            ports = ','.join(port_map.get(pid, []))
-            proc_list.append({
-                'pid': str(pid),
-                'name': name,
-                'username': username,
-                'cmdline': cmdline,
-                'ports': ports
-            })
+            try:
+                pid = proc.info['pid']
+                name = proc.info.get('name', '')
+                username = proc.info.get('username', '')
+                cmdline_raw = proc.info.get('cmdline', [])
+                if not isinstance(cmdline_raw, (list, tuple)):
+                    cmdline_raw = [str(cmdline_raw)] if cmdline_raw else []
+                cmdline = ' '.join(cmdline_raw)
+                ports = ','.join(port_map.get(pid, []))
+                proc_list.append({
+                    'pid': str(pid),
+                    'name': name,
+                    'username': username,
+                    'cmdline': cmdline,
+                    'ports': ports
+                })
+            except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
+                # 跳过无法访问的进程
+                continue
 
         # 过滤逻辑 (排除命令行字段)
         if self.keyword:
@@ -71,6 +80,9 @@ class ProcessDetailDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle('进程命令行详情')
         self.setGeometry(200, 200, 800, 300)
+        
+        # 对话框居中
+        self.center_dialog()
 
         layout = QVBoxLayout(self)
 
@@ -82,6 +94,18 @@ class ProcessDetailDialog(QDialog):
         copy_button = QPushButton('复制')
         copy_button.clicked.connect(self.copy_cmdline)
         layout.addWidget(copy_button)
+
+    def center_dialog(self):
+        """将对话框居中显示在屏幕上"""
+        # 获取屏幕几何信息
+        screen = QDesktopWidget().screenGeometry()
+        # 获取对话框几何信息
+        dialog = self.geometry()
+        # 计算居中位置
+        x = (screen.width() - dialog.width()) // 2
+        y = (screen.height() - dialog.height()) // 2
+        # 移动对话框到居中位置
+        self.move(x, y)
 
     def copy_cmdline(self):
         try:
@@ -96,6 +120,10 @@ class ProcessManager(QMainWindow):
         self.setWindowTitle('进程管理器（含端口）')
         self.setGeometry(100, 100, 1600, 900)
         self.setWindowIcon(QIcon('process_manager_icon.png'))  # 设置窗口图标
+        
+        # 窗口居中
+        self.center_window()
+        
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
@@ -132,6 +160,18 @@ class ProcessManager(QMainWindow):
 
         self.start_refresh() # 初始加载
 
+    def center_window(self):
+        """将窗口居中显示在屏幕上"""
+        # 获取屏幕几何信息
+        screen = QDesktopWidget().screenGeometry()
+        # 获取窗口几何信息
+        window = self.geometry()
+        # 计算居中位置
+        x = (screen.width() - window.width()) // 2
+        y = (screen.height() - window.height()) // 2
+        # 移动窗口到居中位置
+        self.move(x, y)
+
     def resizeEvent(self, event):
         # 窗口大小变化时输出宽高日志 (已移除)
         super().resizeEvent(event)
@@ -165,7 +205,6 @@ class ProcessManager(QMainWindow):
             btn.clicked.connect(lambda _, pid=proc['pid'], name=proc['name']: self.kill_process(pid, name))
             self.table.setCellWidget(row, 4, btn)
 
-        # 列宽设置优化
         # 列宽设置优化
         # 将所有列的调整模式设置为根据内容调整
         # 确保所有列都可以手动调整

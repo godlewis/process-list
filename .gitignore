@@ -1,10 +1,47 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+*.pyo
+*.pyd
+*.so
 build/
 dist/
 wheels/
 *.egg-info
+*.egg
 
 # Virtual environments
-.venv
+venv/
+.venv/
+env/
+.env/
+
+# PyInstaller
+*.spec
+*.manifest
+*.ico
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+tmp_*
+temp_*
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# Build artifacts
+app_icon.ico
+build_config_no_icon.spec
